@@ -119,36 +119,21 @@
           <span class="text-xs font-mono text-gray-400">WCAG 2.1 AA</span>
         </div>
 
-        <!-- Scores -->
-        <div class="grid sm:grid-cols-2 gap-5 mb-8">
-          <div class="bg-base border border-line rounded-xl p-5 text-center">
-            <div class="relative w-28 h-28 mx-auto">
+        <!-- Score (solo accesibilidad) -->
+        <div class="mb-8">
+          <div class="bg-base border border-line rounded-xl p-6 text-center max-w-xs mx-auto">
+            <div class="relative w-32 h-32 mx-auto">
               <svg viewBox="0 0 120 120" class="w-full h-full -rotate-90">
                 <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(148,163,184,.15)" stroke-width="10"/>
                 <circle id="accGauge" class="gauge" cx="60" cy="60" r="52" fill="none" stroke="#22D3EE" stroke-width="10"
                         stroke-linecap="round" stroke-dasharray="327" stroke-dashoffset="327"/>
               </svg>
               <div class="absolute inset-0 flex items-center justify-center">
-                <span id="accScore" class="font-display text-3xl font-extrabold text-white">0</span>
+                <span id="accScore" class="font-display text-4xl font-extrabold text-white">0</span>
               </div>
             </div>
             <p class="mt-3 text-sm font-semibold text-white">Accessibility Score</p>
-            <p class="text-xs text-gray-400">Automated scan only</p>
-          </div>
-
-          <div class="bg-base border border-line rounded-xl p-5 text-center">
-            <div class="relative w-28 h-28 mx-auto">
-              <svg viewBox="0 0 120 120" class="w-full h-full -rotate-90">
-                <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(148,163,184,.15)" stroke-width="10"/>
-                <circle id="perfGauge" class="gauge" cx="60" cy="60" r="52" fill="none" stroke="#818CF8" stroke-width="10"
-                        stroke-linecap="round" stroke-dasharray="327" stroke-dashoffset="327"/>
-              </svg>
-              <div class="absolute inset-0 flex items-center justify-center">
-                <span id="perfScore" class="font-display text-3xl font-extrabold text-white">0</span>
-              </div>
-            </div>
-            <p class="mt-3 text-sm font-semibold text-white">Performance Score</p>
-            <p class="text-xs text-gray-400">Mobile loading</p>
+            <p class="text-xs text-gray-400">WCAG 2.1 AA · Automated scan</p>
           </div>
         </div>
 
@@ -161,28 +146,8 @@
           </div>
         </div>
 
-        <!-- Issues found count (visible) + locked detail (gated) -->
-        <div class="mb-6">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-display font-bold text-white">Issues detected</h3>
-            <span id="issueCount" class="text-sm font-mono text-amber-400"></span>
-          </div>
-
-          <!-- Locked detail preview -->
-          <div class="relative">
-            <ul class="space-y-3 locked" aria-hidden="true">
-              <li class="bg-base border border-line rounded-lg p-3 text-sm">Missing alternative text on key images</li>
-              <li class="bg-base border border-line rounded-lg p-3 text-sm">Form fields without accessible labels</li>
-              <li class="bg-base border border-line rounded-lg p-3 text-sm">Insufficient color contrast in navigation</li>
-              <li class="bg-base border border-line rounded-lg p-3 text-sm">Keyboard navigation barriers</li>
-            </ul>
-            <div class="absolute inset-0 flex items-center justify-center">
-              <span class="inline-flex items-center gap-2 bg-base/80 border border-line rounded-full px-4 py-1.5 text-sm text-gray-300">
-                <i class="fa-solid fa-lock text-primaryl" aria-hidden="true"></i> Full breakdown locked
-              </span>
-            </div>
-          </div>
-        </div>
+        <!-- (Detalle de errores oculto a propósito: el cliente ve solo el puntaje;
+             el desglose completo se entrega tras dejar sus datos) -->
 
         <!-- Lead capture gate -->
         <div id="leadGate" class="bg-base border border-primary/30 rounded-xl p-6">
@@ -290,24 +255,18 @@
     document.getElementById('results').classList.add('hidden');
 
     try {
-      const api = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&category=PERFORMANCE&category=ACCESSIBILITY&strategy=MOBILE`;
+      // === TU CLAVE DE GOOGLE PAGESPEED VA AQUI ===
+      // Reemplaza PEGA_TU_API_KEY_AQUI por la clave que copiaste de Google (empieza con AIza...)
+      const API_KEY = 'AIzaSyBXtLEtTOYH2f4nUxOoPm_f-4qo-ja1pKA';
+      const api = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&category=ACCESSIBILITY&strategy=MOBILE&key=${API_KEY}`;
       const res = await fetch(api);
       if (!res.ok) throw new Error('scan failed');
       const data = await res.json();
 
       const acc  = Math.round(data.lighthouseResult.categories.accessibility.score * 100);
-      const perf = Math.round(data.lighthouseResult.categories.performance.score * 100);
 
-      // count automated accessibility audits that failed
-      const audits = data.lighthouseResult.audits;
-      const accRefs = data.lighthouseResult.categories.accessibility.auditRefs || [];
-      let issues = 0;
-      accRefs.forEach(r => {
-        const a = audits[r.id];
-        if (a && a.score !== null && a.score < 1) issues++;
-      });
-
-      renderResults(url, acc, perf, issues);
+      // Mostrar solo el puntaje de accesibilidad (sin detalle de errores)
+      renderResults(url, acc);
     } catch (e) {
       err.textContent = 'Could not scan that URL. Make sure it is public and includes https://';
       err.classList.remove('hidden');
@@ -317,15 +276,13 @@
     }
   }
 
-  function renderResults(url, acc, perf, issues) {
+  function renderResults(url, acc) {
     document.getElementById('targetUrl').textContent = url;
     document.getElementById('scannedUrl').value = url;
     document.getElementById('scannedScore').value = acc;
-    document.getElementById('issueCount').textContent = issues > 0 ? (issues + ' issue categories found') : 'Needs manual review';
 
-    // animate gauges
+    // animate gauge (solo accesibilidad)
     setScore('accScore', 'accGauge', acc);
-    setScore('perfScore', 'perfGauge', perf);
 
     // risk banner based on score
     const banner = document.getElementById('riskBanner');
@@ -361,8 +318,8 @@
     });
   }
 
-  // Lead form — ready to wire to Firebase
-  document.getElementById('contact-form').addEventListener('submit', function (e) {
+  // Lead form — conectado a Formspree (los leads llegan a tu correo)
+  document.getElementById('contact-form').addEventListener('submit', async function (e) {
     e.preventDefault();
     const status = document.getElementById('form-status');
     const name = document.getElementById('fullname').value.trim();
@@ -372,11 +329,28 @@
       status.className = 'text-sm text-center text-amber-400';
       return;
     }
-    // TODO: connect to Firebase here — save {name, email, scannedUrl, scannedScore} to a "leads" collection
-    status.textContent = 'Thank you! Your full report is on its way to your inbox.';
-    status.className = 'text-sm text-center text-emerald-400';
-    this.reset();
+    status.textContent = 'Sending…';
+    status.className = 'text-sm text-center text-primaryl';
+
+    try {
+      const res = await fetch('https://formspree.io/f/mwvdpqee', {
+        method: 'POST',
+        headers: { 'Accept': 'application/json' },
+        body: new FormData(this),
+      });
+      if (res.ok) {
+        status.textContent = 'Thank you! Your full report is on its way to your inbox.';
+        status.className = 'text-sm text-center text-emerald-400';
+        this.reset();
+      } else {
+        throw new Error('submit failed');
+      }
+    } catch (err) {
+      status.textContent = 'Something went wrong. Please email us at jhongarzon@vertexwebco.net';
+      status.className = 'text-sm text-center text-amber-400';
+    }
   });
+
 </script>
 </body>
 </html>
